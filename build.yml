@@ -8,6 +8,118 @@ on:
 jobs:
   build:
     name: Build voidarm64 + Hyprland ISO
+    runs-on: ubuntu-latest        # standard runner — works on ALL free GitHub accounts
+
+    permissions:
+      contents: write
+
+    steps:
+
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    # ── Set up QEMU so we can run ARM64 binaries on the x86 runner ───────────
+    - name: Set up QEMU for ARM64
+      uses: docker/setup-qemu-action@v3
+      with:
+        platforms: arm64
+
+    # ── Install build tools ───────────────────────────────────────────────────
+    - name: Install dependencies
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y \
+          xorriso \
+          grub-efi-arm64 \
+          grub-efi-arm64-bin \
+          mtools \
+          dosfstools \
+          e2fsprogs \
+          squashfs-tools \
+          curl \
+          xz-utils \
+          rsync \
+          openssl \
+          qemu-user-static \
+          binfmt-support
+        # Register ARM64 binfmt so ARM64 binaries run transparently
+        sudo update-binfmts --enable qemu-aarch64 2>/dev/null || true
+        echo "Done"
+
+    # ── Download xbps ARM64 static binaries ───────────────────────────────────
+    - name: Install xbps
+      run: |
+        set -euo pipefail
+        URL="https://repo-default.voidlinux.org/static/xbps-static-latest.aarch64-musl.tar.xz"
+        curl -fsSL --retry 3 "$URL" -o /tmp/xbps.tar.xz
+        mkdir -p /tmp/xbps-static
+        tar xf /tmp/xbps.tar.xz -C /tmp/xbps-static
+        for bin in xbps-install xbps-query xbps-reconfigure xbps-remove xbps-rindex; do
+          FOUND=$(find /tmp/xbps-static -name "${bin}.static" | head -1)
+          [ -n "$FOUND" ] && sudo install -m755 "$FOUND" /usr/local/bin/${bin} \
+            && echo "installed: ${bin}"
+        done
+        # Verify — runs under QEMU ARM64 emulation transparently
+        xbps-install --version
+
+    # ── Build rootfs ──────────────────────────────────────────────────────────
+    - name: Build rootfs
+      run: |
+        chmod +x scripts/build-rootfs.sh
+        sudo --preserve-env=PATH bash scripts/build-rootfs.sh
+      env:
+        PATH: /usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+      timeout-minutes: 40
+
+    # ── Build ISO ─────────────────────────────────────────────────────────────
+    - name: Build ISO
+      run: |
+        chmod +x scripts/build-iso.sh
+        sudo --preserve-env=PATH bash scripts/build-iso.sh
+        ls -lh output/
+      env:
+        PATH: /usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+      timeout-minutes: 20
+
+    # ── Upload as artifact (always available in Actions tab) ──────────────────
+    - name: Upload ISO artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: voidarm64-hyprland
+        path: output/voidarm64-hyprland.iso
+        retention-days: 7
+
+    # ── Also publish as a GitHub Release ─────────────────────────────────────
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: build-${{ github.run_number }}
+        name: voidarm64 Hyprland — Build ${{ github.run_number }}
+        body: |
+          ## voidarm64 + Hyprland
+
+          Bootable ISO for UTM on Apple Silicon (M1/M2/M3).
+
+          ### How to boot
+          1. Download `voidarm64-hyprland.iso` below
+          2. UTM → **+** → **Virtualize** → **Linux** → select the ISO
+          3. Memory: `4096 MB` · CPU Cores: `4`
+          4. Display: **`virtio-gpu-gl-pci`** ← critical for Hyprland
+          5. Boot → log in as `void` / `voidarm64`
+          6. Hyprland starts automatically on tty1
+        files: output/voidarm64-hyprland.iso
+        draft: false
+        prerelease: false
+name: Build voidarm64 ISO
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build voidarm64 + Hyprland ISO
     runs-on: ubuntu-24.04-arm
 
     permissions:
