@@ -25,12 +25,23 @@ jobs:
 
     - name: Install dependencies
       run: |
+        # Add Ubuntu ports repo so ARM64 packages are available on x86 runner
+        sudo tee /etc/apt/sources.list.d/ubuntu-ports.list <<'EOF'
+        deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble main restricted universe multiverse
+        deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-updates main restricted universe multiverse
+        EOF
+        sudo dpkg --add-architecture arm64
         sudo apt-get update -qq
         sudo apt-get install -y \
-          xorriso grub-efi-arm64 grub-efi-arm64-bin \
+          xorriso \
           mtools dosfstools e2fsprogs squashfs-tools \
-          curl xz-utils rsync openssl qemu-user-static binfmt-support
+          curl xz-utils rsync openssl \
+          qemu-user-static binfmt-support \
+          grub-common \
+          grub-efi-arm64-bin \
+          grub-efi-arm64
         sudo update-binfmts --enable qemu-aarch64 2>/dev/null || true
+        echo "grub-mkstandalone: $(which grub-mkstandalone)"
 
     - name: Install xbps
       run: |
