@@ -32,8 +32,10 @@ mkdir -p "${ROOTFS}"/etc/runit/{1,2,3,sv,runsvdir/default}
 mkdir -p "${ROOTFS}"/home/void
 chmod 1777 "${ROOTFS}/tmp"
 
-# Copy xbps RSA keys so remote repo signature is accepted
-mkdir -p "${ROOTFS}/var/db/xbps/keys"
+# Accept Void Linux repo key non-interactively by pre-syncing with Y piped in
+mkdir -p /var/db/xbps/keys "${ROOTFS}/var/db/xbps/keys"
+echo y | XBPS_ARCH="aarch64" xbps-install   --repository="${VOID_REPO}"   --rootdir="${ROOTFS}"   --sync 2>/dev/null || true
+# Copy any imported keys into rootfs
 cp /var/db/xbps/keys/* "${ROOTFS}/var/db/xbps/keys/" 2>/dev/null || true
 
 XBPS_ARCH="aarch64" xbps-install \
