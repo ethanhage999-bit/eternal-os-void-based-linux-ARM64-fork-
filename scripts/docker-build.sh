@@ -37,16 +37,16 @@ HYPR_REPO="https://raw.githubusercontent.com/Makrennel/hyprland-void/repository-
 mkdir -p "${ROOTFS}/etc/xbps.d"
 echo "repository=${HYPR_REPO}" > "${ROOTFS}/etc/xbps.d/hyprland-void.conf"
 
-# Pre-download and trust both repo signing keys
+# Trust repo keys by downloading plist files from official sources
 mkdir -p /var/db/xbps/keys "${ROOTFS}/var/db/xbps/keys"
 
-# Void Linux official key
-curl -fsSL "https://repo-default.voidlinux.org/current/aarch64/60ae0cd6f0951780bc93467a89afa32d.plist"   -o /var/db/xbps/keys/60ae0cd6f0951780bc93467a89afa32d.plist 2>/dev/null || true
+# Void Linux key — colon format filename as used by xbps
+curl -fsSL   "https://raw.githubusercontent.com/void-linux/xbps/master/data/60:ae:0c:d6:f0:95:17:80:bc:93:46:7a:89:af:a3:2d.plist"   -o "/var/db/xbps/keys/60:ae:0c:d6:f0:95:17:80:bc:93:46:7a:89:af:a3:2d.plist"
 
 # hyprland-void key
-curl -fsSL "https://raw.githubusercontent.com/Makrennel/hyprland-void/repository-aarch64-glibc/30934793e1f55c5c507b19ae68b105b4b.plist"   -o /var/db/xbps/keys/30934793e1f55c5c507b19ae68b105b4b.plist 2>/dev/null || true
+curl -fsSL   "https://raw.githubusercontent.com/Makrennel/hyprland-void/master/data/30:93:47:9e:1f:55:c5:c5:07:b1:9a:e6:8b:10:5b:4b.plist"   -o "/var/db/xbps/keys/30:93:47:9e:1f:55:c5:c5:07:b1:9a:e6:8b:10:5b:4b.plist" 2>/dev/null || true
 
-# Sync repos (keys already trusted, no prompt)
+# Sync repos — keys already in place, no interactive prompt
 XBPS_ARCH="aarch64" xbps-install   --repository="${VOID_REPO}"   --repository="${HYPR_REPO}"   --rootdir="${ROOTFS}"   --sync 2>/dev/null || true
 
 cp /var/db/xbps/keys/* "${ROOTFS}/var/db/xbps/keys/" 2>/dev/null || true
