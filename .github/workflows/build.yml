@@ -17,6 +17,61 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+      with:
+        platforms: arm64
+
+    - name: Build ISO in clean Docker container
+      run: |
+        mkdir -p output
+        # Run the entire build inside a fresh Ubuntu 24.04 container
+        # which has no broken dpkg hooks
+        docker run --rm --privileged \
+          --platform linux/arm64 \
+          -v "$(pwd)/scripts:/scripts:ro" \
+          -v "$(pwd)/output:/output" \
+          ubuntu:24.04 \
+          bash /scripts/docker-build.sh
+      timeout-minutes: 60
+
+    - name: Upload ISO artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: voidarm64-hyprland
+        path: output/voidarm64-hyprland.iso
+        retention-days: 7
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: build-${{ github.run_number }}
+        name: voidarm64 Hyprland - Build ${{ github.run_number }}
+        body: |
+          Bootable ISO for UTM on Apple Silicon.
+          Login: void / voidarm64
+          UTM display setting: virtio-gpu-gl-pci
+        files: output/voidarm64-hyprland.iso
+        draft: false
+        prerelease: falsename: Build voidarm64 ISO
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build voidarm64 + Hyprland ISO
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+
+    - name: Checkout
+      uses: actions/checkout@v4
+
     - name: Set up QEMU for ARM64
       uses: docker/setup-qemu-action@v3
       with:
