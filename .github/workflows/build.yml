@@ -37,14 +37,13 @@ jobs:
         sudo rm -f /etc/apt/apt.conf.d/*packagekit*
         sudo rm -f /usr/lib/needrestart/apt-pinvoke
         sudo rm -f /usr/share/dbus-1/system-services/org.freedesktop.PackageKit.service
-        # Replace every known hook script with a true no-op
+        # Replace every known hook script with a true no-op (only if it exists)
         for f in \
           /usr/lib/update-notifier/update-motd-updates-available \
           /usr/lib/update-notifier/apt-check \
           /usr/lib/needrestart/apt-pinvoke \
-          /usr/lib/packagekit/packagekitd \
           /usr/bin/update-notifier; do
-          [ -f "$f" ] || sudo touch "$f"
+          [ -f "$f" ] || continue
           printf '#!/bin/sh\nexit 0\n' | sudo tee "$f" > /dev/null
           sudo chmod +x "$f"
         done
