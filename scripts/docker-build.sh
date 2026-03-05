@@ -37,9 +37,18 @@ HYPR_REPO="https://raw.githubusercontent.com/Makrennel/hyprland-void/repository-
 mkdir -p "${ROOTFS}/etc/xbps.d"
 echo "repository=${HYPR_REPO}" > "${ROOTFS}/etc/xbps.d/hyprland-void.conf"
 
-# Accept repo keys non-interactively
+# Pre-download and trust both repo signing keys
 mkdir -p /var/db/xbps/keys "${ROOTFS}/var/db/xbps/keys"
-echo y | XBPS_ARCH="aarch64" xbps-install   --repository="${VOID_REPO}"   --repository="${HYPR_REPO}"   --rootdir="${ROOTFS}"   --sync 2>/dev/null || true
+
+# Void Linux official key
+curl -fsSL "https://repo-default.voidlinux.org/current/aarch64/60ae0cd6f0951780bc93467a89afa32d.plist"   -o /var/db/xbps/keys/60ae0cd6f0951780bc93467a89afa32d.plist 2>/dev/null || true
+
+# hyprland-void key
+curl -fsSL "https://raw.githubusercontent.com/Makrennel/hyprland-void/repository-aarch64-glibc/30934793e1f55c5c507b19ae68b105b4b.plist"   -o /var/db/xbps/keys/30934793e1f55c5c507b19ae68b105b4b.plist 2>/dev/null || true
+
+# Sync repos (keys already trusted, no prompt)
+XBPS_ARCH="aarch64" xbps-install   --repository="${VOID_REPO}"   --repository="${HYPR_REPO}"   --rootdir="${ROOTFS}"   --sync 2>/dev/null || true
+
 cp /var/db/xbps/keys/* "${ROOTFS}/var/db/xbps/keys/" 2>/dev/null || true
 
 XBPS_ARCH="aarch64" xbps-install \
