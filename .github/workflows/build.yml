@@ -37,7 +37,14 @@ jobs:
         sudo rm -f /etc/apt/apt.conf.d/*packagekit*
         sudo rm -f /usr/lib/needrestart/apt-pinvoke
         sudo rm -f /usr/share/dbus-1/system-services/org.freedesktop.PackageKit.service
-        echo 'DPkg::Post-Invoke { "true"; };' | sudo tee /etc/apt/apt.conf.d/00no-hooks
+        # Purge packages that register broken post-invoke hooks on GitHub runners
+        sudo apt-get purge -y needrestart packagekit 2>/dev/null || true
+        # Remove all hook snippet files directly
+        sudo find /etc/apt/apt.conf.d/ -name '*needrestart*' -delete
+        sudo find /etc/apt/apt.conf.d/ -name '*packagekit*' -delete
+        sudo find /etc/apt/apt.conf.d/ -name '*PackageKit*' -delete
+        sudo rm -f /usr/share/dbus-1/system-services/org.freedesktop.PackageKit.service
+        sudo rm -f /usr/lib/needrestart/apt-pinvoke
         sudo dpkg --add-architecture arm64
         echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble main restricted universe multiverse" | sudo tee /etc/apt/sources.list.d/ports-arm64.list
         echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/ports-arm64.list
