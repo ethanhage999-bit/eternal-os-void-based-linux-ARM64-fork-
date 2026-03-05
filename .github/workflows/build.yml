@@ -37,27 +37,25 @@ jobs:
         sudo rm -f /etc/apt/apt.conf.d/*packagekit*
         sudo rm -f /usr/lib/needrestart/apt-pinvoke
         sudo rm -f /usr/share/dbus-1/system-services/org.freedesktop.PackageKit.service
-        # Fix broken hooks by replacing the scripts they call with no-ops
-        # (safer than deleting apt config — avoids breaking dpkg itself)
+        # Replace every known hook script with a true no-op
         for f in \
           /usr/lib/update-notifier/update-motd-updates-available \
+          /usr/lib/update-notifier/apt-check \
           /usr/lib/needrestart/apt-pinvoke \
           /usr/lib/packagekit/packagekitd \
           /usr/bin/update-notifier; do
-          if [ -f "$f" ]; then
-            sudo cp "$f" "${f}.bak"
-            echo '#!/bin/sh' | sudo tee "$f" > /dev/null
-            sudo chmod +x "$f"
-          fi
+          [ -f "$f" ] || sudo touch "$f"
+          printf '#!/bin/sh\nexit 0\n' | sudo tee "$f" > /dev/null
+          sudo chmod +x "$f"
         done
         sudo rm -f /usr/share/dbus-1/system-services/org.freedesktop.PackageKit.service
-        sudo rm -f /var/lib/update-notifier/dpkg-run-stamp 2>/dev/null || true
+        sudo mkdir -p /var/lib/update-notifier
+        sudo touch /var/lib/update-notifier/dpkg-run-stamp
         sudo dpkg --add-architecture arm64
         echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble main restricted universe multiverse" | sudo tee /etc/apt/sources.list.d/ports-arm64.list
         echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/ports-arm64.list
         sudo apt-get update -qq
-        # -o DPkg::Use-Pty=0 prevents dpkg from trying to exec hooks via a pty
-        sudo apt-get install -y           -o DPkg::Use-Pty=0           -o DPkg::Post-Invoke=""           -o APT::Update::Post-Invoke=""           xorriso mtools dosfstools e2fsprogs squashfs-tools           curl xz-utils rsync openssl           qemu-user-static binfmt-support           grub-common grub-efi-arm64-bin grub-efi-arm64
+        sudo apt-get install -y           -o DPkg::Use-Pty=0           -o "DPkg::Post-Invoke=:"           -o "APT::Update::Post-Invoke=:"           xorriso mtools dosfstools e2fsprogs squashfs-tools           curl xz-utils rsync openssl           qemu-user-static binfmt-support           grub-common grub-efi-arm64-bin grub-efi-arm64
         sudo update-binfmts --enable qemu-aarch64 2>/dev/null || true
 
     - name: Install xbps
