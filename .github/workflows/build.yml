@@ -37,19 +37,27 @@ jobs:
         sudo rm -f /etc/apt/apt.conf.d/*packagekit*
         sudo rm -f /usr/lib/needrestart/apt-pinvoke
         sudo rm -f /usr/share/dbus-1/system-services/org.freedesktop.PackageKit.service
-        # Nuke every dpkg/apt post-invoke hook snippet on the runner
-        sudo find /etc/apt/apt.conf.d/ -type f -delete
-        sudo find /etc/dpkg/dpkg.cfg.d/ -type f -delete
-        # Write a single config that disables ALL hooks at the dpkg level
-        sudo mkdir -p /etc/apt/apt.conf.d /etc/dpkg/dpkg.cfg.d
-        echo 'DPkg::Post-Invoke {};' | sudo tee /etc/apt/apt.conf.d/00no-hooks
-        echo 'APT::Update::Post-Invoke {};' | sudo tee -a /etc/apt/apt.conf.d/00no-hooks
-        echo 'DPkg::Pre-Install-Pkgs {};' | sudo tee -a /etc/apt/apt.conf.d/00no-hooks
+        # Fix broken hooks by replacing the scripts they call with no-ops
+        # (safer than deleting apt config — avoids breaking dpkg itself)
+        for f in \
+          /usr/lib/update-notifier/update-motd-updates-available \
+          /usr/lib/needrestart/apt-pinvoke \
+          /usr/lib/packagekit/packagekitd \
+          /usr/bin/update-notifier; do
+          if [ -f "$f" ]; then
+            sudo cp "$f" "${f}.bak"
+            echo '#!/bin/sh' | sudo tee "$f" > /dev/null
+            sudo chmod +x "$f"
+          fi
+        done
+        sudo rm -f /usr/share/dbus-1/system-services/org.freedesktop.PackageKit.service
+        sudo rm -f /var/lib/update-notifier/dpkg-run-stamp 2>/dev/null || true
         sudo dpkg --add-architecture arm64
         echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble main restricted universe multiverse" | sudo tee /etc/apt/sources.list.d/ports-arm64.list
         echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/ports-arm64.list
         sudo apt-get update -qq
-        sudo apt-get install -y xorriso mtools dosfstools e2fsprogs squashfs-tools curl xz-utils rsync openssl qemu-user-static binfmt-support grub-common grub-efi-arm64-bin grub-efi-arm64
+        # -o DPkg::Use-Pty=0 prevents dpkg from trying to exec hooks via a pty
+        sudo apt-get install -y           -o DPkg::Use-Pty=0           -o DPkg::Post-Invoke=""           -o APT::Update::Post-Invoke=""           xorriso mtools dosfstools e2fsprogs squashfs-tools           curl xz-utils rsync openssl           qemu-user-static binfmt-support           grub-common grub-efi-arm64-bin grub-efi-arm64
         sudo update-binfmts --enable qemu-aarch64 2>/dev/null || true
 
     - name: Install xbps
