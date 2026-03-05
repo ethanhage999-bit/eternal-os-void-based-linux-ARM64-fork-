@@ -47,23 +47,25 @@ jobs:
         echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-updates main restricted universe multiverse" \
           | sudo tee -a /etc/apt/sources.list.d/ports-arm64.list
 
+        # Disable the PackageKit dpkg post-invoke hook — it tries to call
+        # dbus which isn't running on GitHub Actions and causes every
+        # apt-get install to fail with exit code 100
+        sudo rm -f /usr/share/dbus-1/system-services/org.freedesktop.PackageKit.service
+        sudo chmod -x /usr/lib/packagekit/packagekitd 2>/dev/null || true
+        # Also pre-answer any dpkg prompts
+        export DEBIAN_FRONTEND=noninteractive
+        export DEBCONF_NONINTERACTIVE_SEEN=true
+
         sudo apt-get update -qq
-
-        # Install binfmt-support and qemu-user-static first and separately
-        # — installing alongside other packages triggers a dpkg post-invoke
-        # conflict with the PackageKit dbus service on GitHub runners
-        sudo apt-get install -y binfmt-support
-        sudo apt-get install -y qemu-user-static
-        sudo update-binfmts --enable qemu-aarch64 2>/dev/null || true
-
-        # Now install the rest
         sudo apt-get install -y \
           xorriso \
           mtools dosfstools e2fsprogs squashfs-tools \
           curl xz-utils rsync openssl \
+          qemu-user-static binfmt-support \
           grub-common \
           grub-efi-arm64-bin \
           grub-efi-arm64
+        sudo update-binfmts --enable qemu-aarch64 2>/dev/null || true
         echo "grub-mkstandalone: $(which grub-mkstandalone)"
 
     - name: Install xbps
