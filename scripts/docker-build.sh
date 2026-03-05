@@ -26,11 +26,15 @@ echo "xbps: $(xbps-install --version)"
 
 echo "==> Building Void Linux rootfs..."
 ROOTFS="/tmp/rootfs"
-VOID_REPO="https://repo-default.voidlinux.org/current"
+VOID_REPO="https://repo-default.voidlinux.org/current/aarch64"
 mkdir -p "${ROOTFS}"/{dev,proc,sys,run,tmp,var/{log,cache/xbps},etc/xbps.d,boot}
 mkdir -p "${ROOTFS}"/etc/runit/{1,2,3,sv,runsvdir/default}
 mkdir -p "${ROOTFS}"/home/void
 chmod 1777 "${ROOTFS}/tmp"
+
+# Copy xbps RSA keys so remote repo signature is accepted
+mkdir -p "${ROOTFS}/var/db/xbps/keys"
+cp /var/db/xbps/keys/* "${ROOTFS}/var/db/xbps/keys/" 2>/dev/null || true
 
 XBPS_ARCH="aarch64" xbps-install \
   --repository="${VOID_REPO}" \
