@@ -47,16 +47,21 @@ jobs:
         echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-updates main restricted universe multiverse" \
           | sudo tee -a /etc/apt/sources.list.d/ports-arm64.list
 
-        # Kill the PackageKit dpkg post-invoke hook at the source
-        # It lives in a dpkg config snippet — remove it entirely
-        sudo rm -f /etc/apt/apt.conf.d/20packagekit
-        sudo rm -f /etc/dpkg/dpkg.cfg.d/packagekit
-        # Also remove the dbus service and the script it calls
-        sudo rm -f /usr/share/dbus-1/system-services/org.freedesktop.PackageKit.service
-        sudo rm -f /usr/lib/packagekit/packagekitd
-        # Write a dpkg config that explicitly clears Post-Invoke
-        echo 'DPkg::Post-Invoke "";' | sudo tee /etc/apt/apt.conf.d/00no-packagekit
         export DEBIAN_FRONTEND=noninteractive
+        # Remove ALL dpkg post-invoke hooks that fail on GitHub Actions
+        # (PackageKit and needrestart both try to use dbus/systemd which aren't running)
+        sudo apt-get remove -y --purge needrestart libpython3-dev 2>/dev/null || true
+        sudo rm -f /etc/apt/apt.conf.d/20packagekit
+        sudo rm -f /usr/share/dbus-1/system-services/org.freedesktop.PackageKit.service
+        # Nuke every post-invoke snippet
+        sudo rm -f /etc/apt/apt.conf.d/*needrestart*
+        sudo rm -f /etc/apt/apt.conf.d/*packagekit*
+        sudo rm -f /usr/lib/needrestart/apt-pinvoke
+        # Write an apt config that clears ALL Post-Invoke hooks
+        cat << 'APTCONF' | sudo tee /etc/apt/apt.conf.d/00no-hooks
+DPkg::Post-Invoke { "true"; };
+APT::Update::Post-Invoke { "true"; };
+APTCONF
 
         sudo apt-get update -qq
         sudo apt-get install -y \
