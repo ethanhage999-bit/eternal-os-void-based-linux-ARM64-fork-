@@ -32,14 +32,19 @@ mkdir -p "${ROOTFS}"/etc/runit/{1,2,3,sv,runsvdir/default}
 mkdir -p "${ROOTFS}"/home/void
 chmod 1777 "${ROOTFS}/tmp"
 
-# Accept Void Linux repo key non-interactively by pre-syncing with Y piped in
+# Add Hyprland third-party repo (not in official Void repos)
+HYPR_REPO="https://raw.githubusercontent.com/Makrennel/hyprland-void/repository-aarch64-glibc"
+mkdir -p "${ROOTFS}/etc/xbps.d"
+echo "repository=${HYPR_REPO}" > "${ROOTFS}/etc/xbps.d/hyprland-void.conf"
+
+# Accept repo keys non-interactively
 mkdir -p /var/db/xbps/keys "${ROOTFS}/var/db/xbps/keys"
-echo y | XBPS_ARCH="aarch64" xbps-install   --repository="${VOID_REPO}"   --rootdir="${ROOTFS}"   --sync 2>/dev/null || true
-# Copy any imported keys into rootfs
+echo y | XBPS_ARCH="aarch64" xbps-install   --repository="${VOID_REPO}"   --repository="${HYPR_REPO}"   --rootdir="${ROOTFS}"   --sync 2>/dev/null || true
 cp /var/db/xbps/keys/* "${ROOTFS}/var/db/xbps/keys/" 2>/dev/null || true
 
 XBPS_ARCH="aarch64" xbps-install \
   --repository="${VOID_REPO}" \
+  --repository="${HYPR_REPO}" \
   --rootdir="${ROOTFS}" \
   --sync --yes \
   base-system runit-void linux linux-firmware \
