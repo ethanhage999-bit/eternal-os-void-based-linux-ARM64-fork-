@@ -1,0 +1,131 @@
+name: Build voidarm64 ISO
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build voidarm64 + Hyprland ISO
+    runs-on: ubuntu-24.04-arm
+
+    permissions:
+      contents: write
+
+    steps:
+
+    # ── 1. Checkout ───────────────────────────────────────────────────────────
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    # ── 2. Confirm ARM64 and show environment ─────────────────────────────────
+    - name: Debug environment
+      run: |
+        echo "Architecture: $(uname -m)"
+        echo "OS: $(uname -a)"
+        echo "Disk space:"
+        df -h /
+        echo "Working directory: $(pwd)"
+        echo "Repo contents:"
+        find . -type f | sort
+
+    # ── 3. Install build dependencies ────────────────────────────────────────
+    - name: Install dependencies
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y \
+          xorriso \
+          grub-efi-arm64 \
+          grub-efi-arm64-bin \
+          mtools \
+          dosfstools \
+          e2fsprogs \
+          squashfs-tools \
+          curl \
+          xz-utils \
+          rsync \
+          openssl \
+          qemu-utils
+        echo "All dependencies installed"
+
+    # ── 4. Install xbps ───────────────────────────────────────────────────────
+    - name: Install xbps static binaries
+      run: |
+        set -euo pipefail
+        XBPS_URL="https://repo-default.voidlinux.org/static/xbps-static-latest.aarch64-musl.tar.xz"
+        echo "Downloading xbps from: $XBPS_URL"
+        curl -fsSL --retry 3 "$XBPS_URL" -o /tmp/xbps-static.tar.xz
+        echo "Download complete, extracting..."
+        mkdir -p /tmp/xbps-static
+        tar xf /tmp/xbps-static.tar.xz -C /tmp/xbps-static
+        echo "Extracted files:"
+        find /tmp/xbps-static -type f | head -20
+        # Install each binary
+        for bin in xbps-install xbps-query xbps-reconfigure xbps-remove xbps-rindex; do
+          FOUND=$(find /tmp/xbps-static -name "${bin}.static" 2>/dev/null | head -1)
+          if [ -n "$FOUND" ]; then
+            sudo install -m755 "$FOUND" /usr/local/bin/${bin}
+            echo "Installed: ${bin}"
+          else
+            echo "WARNING: ${bin}.static not found"
+          fi
+        done
+        echo "Verifying xbps-install:"
+        which xbps-install
+        xbps-install --version
+
+    # ── 5. Build rootfs ───────────────────────────────────────────────────────
+    - name: Build rootfs
+      run: |
+        set -euo pipefail
+        chmod +x scripts/build-rootfs.sh
+        sudo --preserve-env=PATH bash scripts/build-rootfs.sh
+      env:
+        PATH: /usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+
+    # ── 6. Build ISO ──────────────────────────────────────────────────────────
+    - name: Build ISO
+      run: |
+        set -euo pipefail
+        chmod +x scripts/build-iso.sh
+        sudo --preserve-env=PATH bash scripts/build-iso.sh
+        echo "ISO built:"
+        ls -lh output/
+      env:
+        PATH: /usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+
+    # ── 7. Upload artifact ────────────────────────────────────────────────────
+    - name: Upload ISO artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: voidarm64-hyprland
+        path: output/voidarm64-hyprland.iso
+        retention-days: 7
+
+    # ── 8. Create GitHub Release ──────────────────────────────────────────────
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: build-${{ github.run_number }}
+        name: voidarm64 Hyprland — Build ${{ github.run_number }}
+        body: |
+          ## voidarm64 + Hyprland
+
+          Auto-built ISO for ARM64 UTM on Apple Silicon.
+
+          ### How to boot in UTM
+          1. Download `voidarm64-hyprland.iso` below
+          2. UTM → **+** → **Virtualize** → **Linux** → select this ISO
+          3. Memory: `4096 MB` · CPU Cores: `4`
+          4. Display card: **`virtio-gpu-gl-pci`** ← required
+          5. Boot → log in as `void` / `voidarm64`
+          6. Hyprland starts automatically
+
+          ### Stack
+          - Base: Void Linux aarch64 glibc · Init: runit
+          - Compositor: Hyprland · Bar: Waybar · Terminal: foot
+          - Audio: PipeWire · Network: NetworkManager
+        files: output/voidarm64-hyprland.iso
+        draft: false
+        prerelease: false
