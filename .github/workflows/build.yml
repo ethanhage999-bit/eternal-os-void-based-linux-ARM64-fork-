@@ -25,12 +25,18 @@ jobs:
 
     - name: Install dependencies
       run: |
-        # Add Ubuntu ports repo so ARM64 packages are available on x86 runner
-        sudo tee /etc/apt/sources.list.d/ubuntu-ports.list <<'EOF'
-        deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble main restricted universe multiverse
-        deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-updates main restricted universe multiverse
-        EOF
+        # Pin existing repos to amd64 only so they don't try to serve arm64
+        sudo sed -i 's/^deb /deb [arch=amd64] /g' /etc/apt/sources.list
+        sudo find /etc/apt/sources.list.d/ -name "*.list" \
+          -exec sudo sed -i 's/^deb /deb [arch=amd64] /g' {} \;
+
+        # Add Ubuntu ports repo for arm64 packages only
         sudo dpkg --add-architecture arm64
+        echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble main restricted universe multiverse" \
+          | sudo tee /etc/apt/sources.list.d/ports-arm64.list
+        echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-updates main restricted universe multiverse" \
+          | sudo tee -a /etc/apt/sources.list.d/ports-arm64.list
+
         sudo apt-get update -qq
         sudo apt-get install -y \
           xorriso \
