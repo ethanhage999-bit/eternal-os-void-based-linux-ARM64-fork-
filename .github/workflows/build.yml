@@ -37,17 +37,21 @@ jobs:
         sudo rm -f /etc/apt/apt.conf.d/*packagekit*
         sudo rm -f /usr/lib/needrestart/apt-pinvoke
         sudo rm -f /usr/share/dbus-1/system-services/org.freedesktop.PackageKit.service
-        # Replace every known hook script with a true no-op (only if it exists)
-        for f in \
-          /usr/lib/update-notifier/update-motd-updates-available \
-          /usr/lib/update-notifier/apt-check \
-          /usr/lib/needrestart/apt-pinvoke \
-          /usr/bin/update-notifier; do
-          [ -f "$f" ] || continue
-          printf '#!/bin/sh\nexit 0\n' | sudo tee "$f" > /dev/null
-          sudo chmod +x "$f"
+        # Find and neutralise every file containing the Post-Invoke hook string
+        sudo grep -rl 'update-motd-updates-available' /etc/apt/ 2>/dev/null | while read f; do
+          echo "Removing hook from: $f"
+          sudo sed -i '/update-motd-updates-available/d' "$f"
+          sudo sed -i '/update-notifier/d' "$f"
+          sudo sed -i '/needrestart/d' "$f"
+          sudo sed -i '/packagekit/d' "$f"
+          sudo sed -i '/PackageKit/d' "$f"
         done
-        sudo rm -f /usr/share/dbus-1/system-services/org.freedesktop.PackageKit.service
+        sudo grep -rl 'Post-Invoke' /etc/apt/ 2>/dev/null | xargs -r sudo sed -i '/Post-Invoke/d'
+        sudo grep -rl 'Post-Invoke' /etc/dpkg/ 2>/dev/null | xargs -r sudo sed -i '/Post-Invoke/d'
+        # Also replace the actual script with a no-op
+        sudo mkdir -p /usr/lib/update-notifier
+        printf '#!/bin/sh\nexit 0\n' | sudo tee /usr/lib/update-notifier/update-motd-updates-available > /dev/null
+        sudo chmod +x /usr/lib/update-notifier/update-motd-updates-available
         sudo mkdir -p /var/lib/update-notifier
         sudo touch /var/lib/update-notifier/dpkg-run-stamp
         sudo dpkg --add-architecture arm64
