@@ -43,12 +43,12 @@ mkdir -p /var/db/xbps/keys "${ROOTFS}/var/db/xbps/keys"
 # Void Linux key — colon format filename as used by xbps
 curl -fsSL   "https://raw.githubusercontent.com/void-linux/xbps/master/data/60:ae:0c:d6:f0:95:17:80:bc:93:46:7a:89:af:a3:2d.plist"   -o "/var/db/xbps/keys/60:ae:0c:d6:f0:95:17:80:bc:93:46:7a:89:af:a3:2d.plist"
 
-# hyprland-void key — lives in the repository branch itself
-curl -fsSL   "https://raw.githubusercontent.com/Makrennel/hyprland-void/repository-aarch64-glibc/30:93:47:9e:1f:55:c5:c5:07:b1:9a:e6:8b:10:5b:4b.plist"   -o "/var/db/xbps/keys/30:93:47:9e:1f:55:c5:c5:07:b1:9a:e6:8b:10:5b:4b.plist"
-echo "hyprland-void key: $(ls -la /var/db/xbps/keys/30*)""
-
-# Sync repos — keys already in place, no interactive prompt
-XBPS_ARCH="aarch64" xbps-install   --repository="${VOID_REPO}"   --repository="${HYPR_REPO}"   --rootdir="${ROOTFS}"   --sync 2>/dev/null || true
+# hyprland-void key — accept interactively then copy
+# xbps has no --yes flag for key import, so we use expect-style input
+# The key is stored after first interactive accept; we pipe yes to handle it
+yes | XBPS_ARCH="aarch64" xbps-install   --repository="${VOID_REPO}"   --repository="${HYPR_REPO}"   --rootdir="${ROOTFS}"   --sync 2>&1 || true
+# Keys are now stored in /var/db/xbps/keys/ on the host
+ls /var/db/xbps/keys/ || true
 
 cp /var/db/xbps/keys/* "${ROOTFS}/var/db/xbps/keys/" 2>/dev/null || true
 
