@@ -37,14 +37,14 @@ jobs:
         sudo rm -f /etc/apt/apt.conf.d/*packagekit*
         sudo rm -f /usr/lib/needrestart/apt-pinvoke
         sudo rm -f /usr/share/dbus-1/system-services/org.freedesktop.PackageKit.service
-        # Purge packages that register broken post-invoke hooks on GitHub runners
-        sudo apt-get purge -y needrestart packagekit 2>/dev/null || true
-        # Remove all hook snippet files directly
-        sudo find /etc/apt/apt.conf.d/ -name '*needrestart*' -delete
-        sudo find /etc/apt/apt.conf.d/ -name '*packagekit*' -delete
-        sudo find /etc/apt/apt.conf.d/ -name '*PackageKit*' -delete
-        sudo rm -f /usr/share/dbus-1/system-services/org.freedesktop.PackageKit.service
-        sudo rm -f /usr/lib/needrestart/apt-pinvoke
+        # Nuke every dpkg/apt post-invoke hook snippet on the runner
+        sudo find /etc/apt/apt.conf.d/ -type f -delete
+        sudo find /etc/dpkg/dpkg.cfg.d/ -type f -delete
+        # Write a single config that disables ALL hooks at the dpkg level
+        sudo mkdir -p /etc/apt/apt.conf.d /etc/dpkg/dpkg.cfg.d
+        echo 'DPkg::Post-Invoke {};' | sudo tee /etc/apt/apt.conf.d/00no-hooks
+        echo 'APT::Update::Post-Invoke {};' | sudo tee -a /etc/apt/apt.conf.d/00no-hooks
+        echo 'DPkg::Pre-Install-Pkgs {};' | sudo tee -a /etc/apt/apt.conf.d/00no-hooks
         sudo dpkg --add-architecture arm64
         echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble main restricted universe multiverse" | sudo tee /etc/apt/sources.list.d/ports-arm64.list
         echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/ports-arm64.list
