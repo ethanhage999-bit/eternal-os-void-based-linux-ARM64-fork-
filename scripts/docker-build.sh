@@ -63,12 +63,12 @@ XBPS_ARCH="aarch64" xbps-install \
   libdrm mesa mesa-dri \
   hyprland xdg-desktop-portal-hyprland xdg-desktop-portal xdg-user-dirs \
   hyprpaper hypridle wl-clipboard wlr-randr grim slurp swappy \
-  Waybar font-awesome wofi \
+  Waybar wofi \
   foot foot-terminfo \
-  noto-fonts-ttf noto-fonts-emoji ttf-ubuntu-font-family \
+  noto-fonts-ttf noto-fonts-emoji font-ttf-ubuntu \
   dunst libnotify \
-  pipewire pipewire-pulse wireplumber pavucontrol \
-  NetworkManager networkmanager-applet iproute2 openssh \
+  pipewire wireplumber pavucontrol \
+  NetworkManager network-manager-applet iproute2 openssh \
   xbps bash bash-completion vim curl wget git htop dbus polkit
 
 echo "==> Configuring system..."
