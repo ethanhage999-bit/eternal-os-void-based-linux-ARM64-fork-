@@ -63,7 +63,7 @@ XBPS_ARCH="aarch64" xbps-install \
   libdrm mesa mesa-dri \
   hyprland xdg-desktop-portal-hyprland xdg-desktop-portal xdg-user-dirs \
   hyprpaper hypridle wl-clipboard wlr-randr grim slurp swappy \
-  waybar otf-font-awesome wofi \
+  Waybar font-awesome wofi \
   foot foot-terminfo \
   noto-fonts-ttf noto-fonts-emoji ttf-ubuntu-font-family \
   dunst libnotify \
@@ -156,7 +156,7 @@ grep -q "^void:" "${ROOTFS}/etc/shadow" 2>/dev/null || \
 sed -i "s|^root:[^:]*:|root:${HASHED}:|" "${ROOTFS}/etc/shadow" 2>/dev/null || true
 
 echo "==> Writing desktop configs..."
-mkdir -p "${ROOTFS}/home/void/.config"/{hypr,waybar,wofi,foot,dunst}
+mkdir -p "${ROOTFS}/home/void/.config"/{hypr,Waybar,wofi,foot,dunst}
 
 cat > "${ROOTFS}/home/void/.config/hypr/hyprland.conf" << 'HYPR'
 monitor = , preferred, auto, 1
@@ -164,7 +164,7 @@ exec-once = pipewire
 exec-once = wireplumber
 exec-once = pipewire-pulse
 exec-once = dunst
-exec-once = waybar
+exec-once = Waybar
 exec-once = nm-applet --indicator
 input {
   kb_layout = us
@@ -221,7 +221,7 @@ bind = , XF86AudioLowerVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
 bind = , XF86AudioMute, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
 HYPR
 
-cat > "${ROOTFS}/home/void/.config/waybar/config" << 'WAYBAR'
+cat > "${ROOTFS}/home/void/.config/Waybar/config" << 'WAYBAR'
 {
   "layer": "top", "position": "top", "height": 28, "spacing": 4,
   "modules-left": ["hyprland/workspaces", "hyprland/window"],
@@ -237,9 +237,9 @@ cat > "${ROOTFS}/home/void/.config/waybar/config" << 'WAYBAR'
 }
 WAYBAR
 
-cat > "${ROOTFS}/home/void/.config/waybar/style.css" << 'CSS'
+cat > "${ROOTFS}/home/void/.config/Waybar/style.css" << 'CSS'
 * { font-family: monospace; font-size: 12px; border: none; min-height: 0; }
-window#waybar { background: rgba(46,52,64,0.95); color: #eceff4; }
+window#Waybar { background: rgba(46,52,64,0.95); color: #eceff4; }
 #workspaces button { padding: 0 6px; color: #81a1c1; background: transparent; }
 #workspaces button.active { color: #88c0d0; border-bottom: 2px solid #88c0d0; }
 #clock { color: #88c0d0; padding: 0 10px; }
